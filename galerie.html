@@ -1,0 +1,451 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlammesFlix</title>
+
+Bienvenue dans le mordor !!!</p>
+    <input id="search" type="search" placeholder="Rechercher une vidéo...">
+  </section><style>
+:root {
+  --bg: #101014;
+  --card: #1c1c25;
+  --text: #f5f5f7;
+  --muted: #aaaab7;
+  --accent: #8b5cf6;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 20px 5%;
+  background: #181820;
+  border-bottom: 1px solid #30303a;
+}
+.logo { color: #a78bfa; font-size: 25px; font-weight: bold; }
+button, .btn {
+  padding: 11px 15px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.15); }
+main { max-width: 1400px; margin: auto; padding: 25px 5%; }
+.muted { color: var(--muted); }
+input {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin: 7px 0 16px;
+  border: 1px solid #444451;
+  border-radius: 7px;
+  background: #17171f;
+  color: white;
+}
+label { font-size: 14px; font-weight: bold; }
+#admin, #login { display: none; }
+.panel {
+  padding: 20px;
+  margin: 20px 0;
+  background: var(--card);
+  border: 1px solid #343440;
+  border-radius: 12px;
+}
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+#search { max-width: 450px; }
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 20px;
+}
+.card {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--card);
+  border-radius: 12px;
+}
+.thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #292933;
+  border: 0;
+}
+.play {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: #292933;
+  border-radius: 0;
+}
+.play img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+.play span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 42px;
+  text-shadow: 0 2px 10px black;
+}
+.card-info { padding: 13px; }
+.card-info h3 { overflow-wrap: anywhere; }
+.card-info p { color: var(--muted); font-size: 13px; }
+.small { padding: 7px 10px; font-size: 12px; }
+.danger { background: #9f303b; }
+#player { display: none; margin-bottom: 25px; }
+#player video, #player iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 75vh;
+  border: 0;
+  border-radius: 10px;
+  background: black;
+}
+.notice { color: #fbbf24; font-size: 13px; line-height: 1.5; }
+</style>
+</head>
+
+<body>
+<header>
+  <div class="logo">STREAMZONE</div>
+  <div class="actions">
+    <button id="adminButton">⚙ Administration</button>
+    <button id="logout" style="display:none">Déconnexion</button>
+  </div>
+</header>
+
+<main>
+  <section id="login" class="panel">
+    <h2>Connexion administrateur</h2>
+    <form id="loginForm">
+      <label for="password">Mot de passe</label>
+      <input id="password" type="password" required
+        autocomplete="current-password">
+      <button type="submit">Se connecter</button>
+    </form>
+    <p id="loginMessage" class="muted"></p>
+  </section>
+
+  <section id="admin" class="panel">
+    <h2>Ajouter une vidéo</h2>
+    <p class="muted">Colle un lien YouTube ou une adresse directe vers un fichier MP4.</p>
+
+    <form id="videoForm">
+      <label for="title">Nom de la vidéo</label>
+      <input id="title" placeholder="Ex. : Raptor" required maxlength="100">
+
+      <label for="url">Lien de la vidéo</label>
+      <input id="url" type="file" accept="video/*"
+        placeholder="https://www.youtube.com/watch?v=..."
+        required>
+
+      <label for="thumbnail">Lien de la miniature (facultatif)</label>
+      <input id="thumbnail" type="url"
+        placeholder="https://exemple.fr/miniature.jpg">
+
+      <button type="submit">＋ Ajouter à la galerie</button>
+    </form>
+    <p id="formMessage" class="muted"></p>
+    <p class="notice">
+      Prototype local : le mot de passe dans ce fichier ne constitue pas
+      une vraie protection pour un site publié sur Internet.
+    </p>
+  </section>
+
+  <section>
+    <h1>Ma vidéothèque</h1>
+    <p class="muted">Toutes tes vidéos
+
+  <section id="player" class="panel">
+    <button id="back">← Retour à la galerie</button>
+    <h2 id="playingTitle"></h2>
+    <div id="playerContent"></div>
+  </section>
+
+  <section id="gallery" class="gallery"></section>
+  <p id="empty" class="muted">Aucune vidéo pour le moment.</p>
+</main>
+
+<script>
+/*
+  DEMONSTRATION LOCALE UNIQUEMENT.
+  Ce mot de passe est visible dans le code source.
+  Ne publie pas cette version en pensant que l'administration est sécurisée.
+*/
+const ADMIN_PASSWORD = "16SA68mi.";
+const STORAGE_KEY = "streamzone-videos-v1";
+
+const $ = id => document.getElementById(id);
+const gallery = $("gallery");
+let videos = loadVideos();
+let currentObjectUrl = null;
+
+function loadVideos() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveVideos() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(videos));
+    return true;
+  } catch {
+    $("formMessage").textContent =
+      "Stockage indisponible. La liste n'a pas pu être enregistrée.";
+    return false;
+  }
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const u = new URL(value);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function youtubeId(value) {
+  try {
+    const u = new URL(value);
+    let id = "";
+
+    if (u.hostname === "youtu.be" ||
+        u.hostname === "www.youtu.be") {
+      id = u.pathname.split("/").filter(Boolean)[0] || "";
+    } else if (
+      ["youtube.com", "www.youtube.com", "m.youtube.com",
+       "youtube-nocookie.com", "www.youtube-nocookie.com"]
+      .includes(u.hostname)
+    ) {
+      if (u.pathname === "/watch") {
+        id = u.searchParams.get("v") || "";
+      } else if (/^\/(embed|shorts|live)\//.test(u.pathname)) {
+        id = u.pathname.split("/")[2] || "";
+      }
+    }
+
+    return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+function videoType(url) {
+  return youtubeId(url) ? "youtube" : "direct";
+}
+
+function defaultThumbnail(video) {
+  if (video.type === "youtube") {
+    return "https://img.youtube.com/vi/" +
+      youtubeId(video.url) + "/hqdefault.jpg";
+  }
+  return "";
+}
+
+function render() {
+  gallery.replaceChildren();
+
+  const term = $("search").value.trim().toLowerCase();
+  const filtered = videos.filter(v => v.title.toLowerCase().includes(term));
+
+  $("empty").textContent = filtered.length
+    ? ""
+    : (videos.length ? "Aucun résultat." : "Aucune vidéo pour le moment.");
+
+  filtered.forEach(video => {
+    const card = document.createElement("article");
+    card.className = "card";
+
+    const play = document.createElement("button");
+    play.className = "play";
+    play.setAttribute("aria-label", "Lire " + video.title);
+
+    const img = document.createElement("img");
+    img.className = "thumb";
+    img.alt = "Miniature de " + video.title;
+    img.loading = "lazy";
+    img.src = video.thumbnail || defaultThumbnail(video)
+      || "data:image/svg+xml," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="100%" height="100%" fill="#292933"/><text x="50%" y="50%" fill="white" font-size="24" text-anchor="middle">VIDÉO</text></svg>'
+      );
+
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = "data:image/svg+xml," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="100%" height="100%" fill="#292933"/><text x="50%" y="50%" fill="white" font-size="24" text-anchor="middle">VIDÉO</text></svg>'
+      );
+    };
+
+    const icon = document.createElement("span");
+    icon.textContent = "▶";
+    play.append(img, icon);
+    play.addEventListener("click", () => openVideo(video));
+
+    const info = document.createElement("div");
+    info.className = "card-info";
+
+    const h3 = document.createElement("h3");
+    h3.textContent = video.title;
+
+    const p = document.createElement("p");
+    p.textContent = video.type === "youtube" ? "YouTube" : "Lien vidéo";
+
+    info.append(h3, p);
+
+    if (sessionStorage.getItem("streamzone-admin") === "yes") {
+      const del = document.createElement("button");
+      del.className = "small danger";
+      del.textContent = "Supprimer";
+      del.addEventListener("click", () => {
+        videos = videos.filter(v => v.id !== video.id);
+        saveVideos();
+        render();
+      });
+      info.append(del);
+    }
+
+    card.append(play, info);
+    gallery.append(card);
+  });
+}
+
+function openVideo(video) {
+  closePlayer(false);
+  $("playingTitle").textContent = video.title;
+
+  const content = $("playerContent");
+  content.replaceChildren();
+
+  if (video.type === "youtube") {
+    const frame = document.createElement("iframe");
+    frame.src = "https://www.youtube-nocookie.com/embed/" +
+      youtubeId(video.url);
+    frame.title = video.title;
+    frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    frame.allowFullscreen = true;
+    content.append(frame);
+  } else {
+    const player = document.createElement("video");
+    player.controls = true;
+    player.autoplay = true;
+    player.playsInline = true;
+    player.src = video.url;
+    content.append(player);
+  }
+
+  $("player").style.display = "block";
+  $("player").scrollIntoView({ behavior: "smooth" });
+}
+
+function closePlayer(hide = true) {
+  $("playerContent").replaceChildren();
+  if (hide) $("player").style.display = "none";
+}
+
+$("back").addEventListener("click", () => closePlayer());
+$("search").addEventListener("input", render);
+
+$("adminButton").addEventListener("click", () => {
+  if (sessionStorage.getItem("streamzone-admin") === "yes") {
+    $("admin").style.display =
+      $("admin").style.display === "block" ? "none" : "block";
+    return;
+  }
+  $("login").style.display = "block";
+  $("password").focus();
+});
+
+$("loginForm").addEventListener("submit", event => {
+  event.preventDefault();
+
+  if ($("password").value === ADMIN_PASSWORD) {
+    sessionStorage.setItem("streamzone-admin", "yes");
+    $("login").style.display = "none";
+    $("admin").style.display = "block";
+    $("logout").style.display = "inline-block";
+    $("loginMessage").textContent = "";
+    $("password").value = "";
+    render();
+  } else {
+    $("loginMessage").textContent = "Mot de passe incorrect.";
+  }
+});
+
+$("logout").addEventListener("click", () => {
+  sessionStorage.removeItem("streamzone-admin");
+  $("admin").style.display = "none";
+  $("logout").style.display = "none";
+  render();
+});
+
+$("videoForm").addEventListener("submit", event => {
+  event.preventDefault();
+
+  const title = $("title").value.trim();
+  const file = $("url").files[0];
+const thumbnail = $("thumbnail").value.trim();
+
+if (!file) {
+  $("formMessage").textContent = "Choisis un fichier vidéo.";
+  return;
+}
+
+if (!file.type.startsWith("video/")) {
+  $("formMessage").textContent = "Choisis un fichier vidéo valide.";
+  return;
+}
+
+if (thumbnail && !isValidHttpUrl(thumbnail)) {
+  $("formMessage").textContent =
+    "Le lien de la miniature doit commencer par http:// ou https://.";
+  return;
+}
+
+const url = URL.createObjectURL(file);
+const type = "direct";
+
+  const item = {
+    id: crypto.randomUUID(),
+    title,
+    url,
+    thumbnail,
+    type
+  };
+
+  videos.unshift(item);
+
+  if (saveVideos()) {
+    $("videoForm").reset();
+    $("formMessage").textContent = "Vidéo ajoutée à la galerie !";
+    render();
+  } else {
+    videos.shift();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
